@@ -7,22 +7,90 @@
         </div>
       </div>
 
-      <form class="col-6 offset-3" action="/">
+      <form class="col-6 offset-3" @submit.prevent="formSubmited = true" v-if="!formSubmited">
         <div class="form-group"
-             v-for="(field) in info"
+             v-for="(field, index) in info"
              :key="field.name"
         >
           <label :for="field.name">{{ field.name }}: </label>
-          <i class="fas fa-check"></i>
+          <span class="fa"
+                v-if="controls[index].activated"
+                :class="controls[index].error ?
+                'fa-exclamation-circle text-danger' :
+                'fa-check-circle text-success'"
+          ></span>
           <input type="text"
                  class="form-control"
                  :id="field.name"
-                 v-model="field.value"
-                 @input="isValid(field.value, field.pattern, field.progress)"
+                 :value="field.value"
+                 @input="onInput(index, $event.target.value)"
           >
         </div>
 
-        <button type="submit" class="btn btn-primary">Submit</button>
+        <button type="submit"
+                class="btn btn-primary"
+                :disabled="done < info.length"
+        >Submit
+        </button>
+      </form>
+
+      <div v-else>
+        <table class="table table-bordered">
+          <tr v-for="(field, index) in info">
+            <td>{{ field.name }}</td>
+            <td>{{ field.value }}</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="sample row">
+      <form class="col-6 offset-3">
+        <div class="content alert alert-info" @scroll="onScroll">
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+          <p>This text no one reads. This text no one reads. This text no one reads.</p>
+        </div>
+
+        <div v-if="scrolled">
+          <div class="form-check">
+            <label class="form-check-label">
+              <input class="form-check-input" type="checkbox" v-model="flags.agree">
+              Согласен
+            </label>
+          </div>
+          <div class="form-check">
+            <label class="form-check-label">
+              <input class="form-check-input" type="checkbox" v-model="flags.spam">
+              Хочу получать спам
+            </label>
+          </div>
+          <div v-show="flags.spam">
+            <div class="form-check">
+              <label class="form-check-label">
+                <input class="form-check-input" type="radio" value="phone" v-model="spam">
+                Phone
+              </label>
+            </div>
+            <div class="form-check">
+              <label class="form-check-label">
+                <input class="form-check-input" type="radio" value="email" v-model="spam">
+                Email
+              </label>
+            </div>
+          </div>
+          <hr>
+          <button class="btn btn-primary">
+            Send Data
+          </button>
+        </div>
       </form>
     </div>
   </div>
@@ -39,69 +107,79 @@
             name: 'Name',
             value: '',
             pattern: /^[a-zA-z]{2,30}$/,
-            progress: false,
           },
           {
             name: 'Phone',
             value: '',
             pattern: /^[0-9]{7,14}$/,
-            progress: false,
           },
           {
             name: 'Email',
             value: '',
             pattern: /.+/,
-            progress: false,
           },
           {
             name: 'Some Field 1',
             value: '',
             pattern: /.+/,
-            progress: false,
           },
           {
             name: 'Some field 2',
             value: '',
             pattern: /.+/,
-            progress: false,
           }
         ],
-
-        successClass: ['fa-check', 'bg-success'],
-        errorClass: ['fa-times', 'bg-danger'],
-        defaultClass: 'hidden',
-        progress: 0,
+        controls: [],
+        formSubmited: false,
+        scrolled: false,
+        flags: {
+          agree: false,
+          spam: false
+        },
+        spam: 'phone'
+      }
+    },
+    beforeMount() {
+      for (let i = 0; i < this.info.length; i++) {
+        this.controls.push({
+          error: !this.info[i].pattern.test(this.info[i].value),
+          activated: this.info[i].value !== ''
+        });
       }
     },
     methods: {
-      isValid(value, pattern, progress) {
-        if (value.match(pattern) && !progress) {
-          progress = true;
-          this.progress += 20;
-        } else {
-          progress = false;
-          this.progress -= 20;
+      onInput(index, value) {
+        let data = this.info[index];
+        let control = this.controls[index];
+
+        data.value = value;
+        control.error = !data.pattern.test(value);
+        control.activated = true
+      },
+      onScroll(e) {
+        if (e.target.scrollHeight - e.target.clientHeight - e.target.scrollTop < 10) {
+          this.scrolled = true;
+          console.log(this.flags.spam);
         }
       }
     },
     computed: {
+      done() {
+        let done = 0;
+
+        for (let i = 0; i < this.info.length; i++) {
+          if (!this.controls[i].error) {
+            done++;
+          }
+        }
+
+        return done;
+      },
       progressWidth() {
         return {
-          width: this.progress + '%'
-        };
-      },
-      // className() {
-      //   if () {
-      //     return this.successClass
-      //   } else if () {
-      //     return this.errorClass
-      //   } else {
-      //     return this.defaultClass
-      //   }
-      // }
-    },
-    watch: {
-
+          width: (this.done / this.info.length * 100) + '%'
+        }
+      }
     }
   }
 </script>
@@ -111,10 +189,8 @@
     margin-right: 5px;
   }
 
-  .fas {
-    padding: 3px;
-    font-size: 8px;
-    color: #fff;
-    border-radius: 50%;
+  .content {
+    height: 300px;
+    overflow: auto;
   }
 </style>
